@@ -1,5 +1,5 @@
-# risk-free proxy rates
-CURVE_CONFIG = {
+# US market curves
+FRED_CONFIG = {
     # risk-free proxies
     'treasury': {
         '1M': 'DGS1MO',
@@ -20,5 +20,12 @@ CURVE_CONFIG = {
     'futures': {
         'TBill3M': 'DTB3',
         'TBill6M': 'DTB6'
+    }
+}
+
+# Euribor proxies and short-term rates
+ECB_CONFIG = {
+    'estr': {
+        'ESTR': 'EST.B.EU000A2X2A25.WT' # Euro short-term rate
     }
 }

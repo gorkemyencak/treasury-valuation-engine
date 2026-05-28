@@ -1,8 +1,12 @@
 import pandas as pd
 
-from src.config.dataset_config import CURVE_CONFIG
+from src.config.dataset_config import (
+    FRED_CONFIG,
+    ECB_CONFIG
+)
 
-from src.data.fred_downloader import FredCurveDownloader
+from src.data.providers.fred_provider import FredCurveProvider
+from src.data.providers.ecb_provider import ECBCurveProvider
 
 class MarketLoader:
     """ Downloads, cleans and aligns dates of selected market dataset """
@@ -14,13 +18,22 @@ class MarketLoader:
 
     # download raw curves
     def download_curves(self):
-        """ Download market dataset using FredCurveDownloader class """
-        for curve in CURVE_CONFIG.keys():
-            loader = FredCurveDownloader(
+        """ Download market dataset using BaseMarketDataProvider abstract class """
+        # FRED
+        for curve in FRED_CONFIG.keys():
+            loader = FredCurveProvider(
                 curve_name = curve
             )
 
             self.raw_curves[curve] = loader.download()
+        
+        # ECB
+        for curve in ECB_CONFIG.keys():
+            loader = ECBCurveProvider(
+                curve_name = curve
+            )
+
+            # self.raw_curves[curve] = loader.download()
 
     # clean single curve
     def _clean_curve(
@@ -72,5 +85,5 @@ class MarketLoader:
         self.download_curves()
         self.clean_all_curves()
         df_curves = self.align_dates()
-        
+
         return df_curves

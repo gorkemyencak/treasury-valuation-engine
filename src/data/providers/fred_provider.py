@@ -3,35 +3,37 @@ import pandas as pd
 from pathlib import Path
 from fredapi import Fred
 
-from src.config.dataset_config import CURVE_CONFIG
+from src.config.dataset_config import FRED_CONFIG
+
+from src.data.providers.base_provider import BaseMarketDataProvider
+
 
 FRED_API_KEY = "41504b53ebf306bcd89ceb69bbd6eba8"
 
-class FredCurveDownloader:
-    """ Downloading US Treasury yield curve from FRED """
+class FredCurveProvider(BaseMarketDataProvider):
+    """ Downloading US market curves from FRED """
     def __init__(
             self,
-            curve_name,
+            curve_name: str,
             data_dir = 'data/curves'
     ):
         
-        if curve_name not in CURVE_CONFIG:
-            raise ValueError(f'Unknown curve: {curve_name}')
+        if curve_name not in FRED_CONFIG:
+            raise ValueError(f'Unknown FRED curve: {curve_name}')
+        
+        # superclass initializer
+        super().__init__(
+            curve_name = curve_name,
+            data_dir = data_dir
+        )
         
         # attributes
-        self.curve_name = curve_name
-        project_root = Path(__file__).resolve().parents[2]
-        self.data_dir = project_root / data_dir
-        self.data_dir.mkdir(
-            parents = True, 
-            exist_ok = True
-        )
-        self.file_path = self.data_dir / f'{self.curve_name}.csv'
         self.fred = Fred(api_key = FRED_API_KEY)
-        self.series_map = CURVE_CONFIG[self.curve_name]
+        self.series_map = FRED_CONFIG[self.curve_name]
+
 
     def download(self) -> pd.DataFrame:
-        """ Download specified curve from Fred, returns exception if unavailable, and save locally """
+        """ Download specified curve from Fred, return exception if unavailable, and save locally """
         if not self.file_path.exists():
             print(f'Downloading {self.curve_name} curve from FRED..')
             df = pd.DataFrame()
@@ -53,6 +55,7 @@ class FredCurveDownloader:
         
         else:
             print(f'{self.curve_name} curve dataset already downloaded..')
+            
             return pd.read_csv(
                 self.file_path,
                 index_col = 0,
