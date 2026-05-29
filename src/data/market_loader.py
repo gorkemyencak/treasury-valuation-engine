@@ -33,7 +33,7 @@ class MarketLoader:
                 curve_name = curve
             )
 
-            # self.raw_curves[curve] = loader.download()
+            self.raw_curves[curve] = loader.download()
 
     # clean single curve
     def _clean_curve(
@@ -80,7 +80,7 @@ class MarketLoader:
         return df_merged
     
     # market loader pipeline
-    def loader_pipeline(self): #-> pd.DataFrame:
+    def loader_pipeline(self) -> pd.DataFrame:
         """ Market loader pipeline performing downloading, data cleansing and date alignment steps """
         self.download_curves()
         self.clean_all_curves()

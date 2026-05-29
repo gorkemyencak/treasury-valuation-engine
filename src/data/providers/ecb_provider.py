@@ -28,6 +28,42 @@ class ECBCurveProvider(BaseMarketDataProvider):
         # attributes
         self.series_map = ECB_CONFIG[self.curve_name]
 
+
+    def _fetch_series(
+            self,
+            flow: str,
+            key: str
+    ) -> pd.Series:
+        """ Fetching specified flow/key series from ECB portal """
+        url = f'{BASE_URL}/{flow}/{key}'
+
+        params = {
+            'format': 'csvdata'
+        }
+
+        headers = {
+            'Accept': 'text/csv'
+        }
+
+        response = requests.get(
+            url,
+            params = params,
+            headers = headers,
+            timeout = 30
+        )
+
+        response.raise_for_status()
+
+        df = pd.read_csv(StringIO(response.text))
+
+        # ECB standard columns
+        df['TIME_PERIOD'] = pd.to_datetime(df['TIME_PERIOD'])
+        df['OBS_VALUE'] = pd.to_numeric(df['OBS_VALUE'], errors = 'coerce')
+
+        df = df.set_index('TIME_PERIOD')
+
+        return df['OBS_VALUE']
+
     
     def download(self) -> pd.DataFrame:
         """ Download specified curve from ECB portal, return exception if unavailable, and save locally """
@@ -37,34 +73,28 @@ class ECBCurveProvider(BaseMarketDataProvider):
 
             for tenor, series in self.series_map.items():
                 try:
-                    url = f'{BASE_URL}/{series}'
+                    splitted_series_key = series.split('.')
 
-                    response = requests.get(
-                        url,
-                        headers = {'Accept': 'text/csv'}
+                    flow = splitted_series_key[0]
+
+                    key = '.'.join(splitted_series_key[1:])
+
+                    #flow, key = series.split('.')
+
+                    df[tenor] = self._fetch_series(
+                        flow = flow,
+                        key = key
                     )
 
-                    response.raise_for_status()
-
-                    temp_df = pd.read_csv(
-                        StringIO(response.text)
-                    )
-
-                    temp_df['TIME_PERIOD'] = pd.to_datetime(temp_df['TIME_PERIOD'])
-
-                    temp_df = temp_df.set_index('TIME_PERIOD')
-
-                    df[tenor] = temp_df['OBS_VALUE']
-                
                 except Exception as e:
                     print(f'{series} not available -> {e}')
                     df[tenor] = None
                 
-                df.index.name = 'Date'
-                df = df.sort_index()
+            df.index.name = 'Date'
+            df = df.sort_index()
 
-                # save the dataframe locally
-                df.to_csv(self.file_path)
+            # save the dataframe locally
+            df.to_csv(self.file_path)
 
             return df
         
