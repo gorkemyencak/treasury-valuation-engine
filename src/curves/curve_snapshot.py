@@ -91,6 +91,6 @@ class CurveSnapshot:
             f'CurveSnapshot('
             f'curve_name={self._curve_name}, '
             f'as_of_date={self._as_of_date}, '
-            f'tenor length={len(self._tenors)}'
+            f'tenor_length={len(self._tenors)}'
             f')'
         )

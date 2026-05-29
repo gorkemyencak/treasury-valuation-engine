@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from curves.curve_snapshot import CurveSnapshot
+from src.curves.curve_snapshot import CurveSnapshot
 from src.curves.base_curve import BaseCurve
 
 class DiscountCurve(BaseCurve):
@@ -9,8 +9,8 @@ class DiscountCurve(BaseCurve):
     def __init__(
             self, 
             curve_snapshot: CurveSnapshot, 
-            maturities,
-            discount_factors,
+            maturities: list[float],
+            discount_factors: list[float],
             interpolation_method: str = 'linear'
     ):
         
