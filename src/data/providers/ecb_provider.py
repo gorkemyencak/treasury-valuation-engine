@@ -79,8 +79,6 @@ class ECBCurveProvider(BaseMarketDataProvider):
 
                     key = '.'.join(splitted_series_key[1:])
 
-                    #flow, key = series.split('.')
-
                     df[tenor] = self._fetch_series(
                         flow = flow,
                         key = key
