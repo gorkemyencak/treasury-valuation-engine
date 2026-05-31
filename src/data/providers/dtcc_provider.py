@@ -34,12 +34,12 @@ class DTCCCurveProvider(BaseMarketDataProvider):
         response = requests.get(url)
         response.raise_for_status()
         json_data = response.json()
-        
-        # fetching ois data from json response
-        if json_data.get('currency') != self.config['currency']:
+
+        ### fetching ois data from json response
+        if json_data.get('currency') != self.config['currency']: 
             raise ValueError('Currency mismatch in DTCC response')
         
-        ois_curve = json_data['curve']
+        ois_curve = json_data['curve']            
 
         return pd.DataFrame(ois_curve)
     

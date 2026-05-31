@@ -38,6 +38,6 @@ DTCC_CONFIG = {
     },
     'eur_ois': {
         'currency': 'EUR',
-        'api_endpoint': 'https://www.checkmyswap.com/api/curves/all'
+        'api_endpoint': 'https://www.checkmyswap.com/api/curves/EUR'#'https://www.checkmyswap.com/api/curves/all'
     }
 }
