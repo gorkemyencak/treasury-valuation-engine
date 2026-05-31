@@ -13,6 +13,7 @@ MARKET_CONVENTIONS = {
     }
 }
 
+# curve builder structure
 CURVE_BUILD = {
     'usd_discount_curve': {
         'short_end': 'sofr',

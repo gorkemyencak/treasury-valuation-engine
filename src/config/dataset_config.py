@@ -34,38 +34,10 @@ ECB_CONFIG = {
 DTCC_CONFIG = {
     'usd_ois': {
         'currency': 'USD',
-        'index': 'SOFR',
-        'instrument_type': 'OIS',
-        'source': 'DTCC',
-        'tenors': [
-            '1Y',
-            '2Y',
-            '3Y',
-            '4Y',
-            '5Y',
-            '7Y',
-            '10Y',
-            '15Y',
-            '20Y',
-            '30Y'
-        ]
+        'api_endpoint': 'https://www.checkmyswap.com/api/curves/USD'
     },
-    'usd_irs': {
-        'currency': 'USD',
-        'index': 'SOFR',
-        'instrument_type': 'IRS',
-        'source': 'DTCC',
-        'tenors': [
-            '1Y',
-            '2Y',
-            '3Y',
-            '4Y',
-            '5Y',
-            '7Y',
-            '10Y',
-            '15Y',
-            '20Y',
-            '30Y'
-        ]
+    'eur_ois': {
+        'currency': 'EUR',
+        'api_endpoint': 'https://www.checkmyswap.com/api/curves/all'
     }
 }
