@@ -12,6 +12,17 @@ class BootstrapCurveEngine:
             instruments,
             interpolation_method = 'linear'
     ):
+        # validatng non-empty instruments
+        if len(instruments) <= 0:
+            raise ValueError('No instruments supplied!')
+
+        # ensure sorted instruments
+        instruments = sorted(
+            instruments,
+            key = lambda x: x.maturity
+        )
+
+        discount_factor_map = {}
         
         maturities = []
         dfs = []
@@ -20,7 +31,11 @@ class BootstrapCurveEngine:
 
             maturity = inst.maturity
 
-            df = inst.implied_discount_factor()
+            df = inst.implied_discount_factor(
+                curve = discount_factor_map
+            )
+
+            discount_factor_map[maturity] = df
 
             maturities.append(maturity)
             dfs.append(df)
