@@ -4,8 +4,8 @@ from src.utils.parser import TenorParser
 
 from src.instruments.bootstrap_instrument import BootstrapInstrument
 
-class DepositInstrument(BootstrapInstrument):
-    """ Deposit bootstrap instrument """
+class OISInstrument(BootstrapInstrument):
+    """ OIS swap instrument """
     def __init__(
             self, 
             tenor: str, 
@@ -13,7 +13,7 @@ class DepositInstrument(BootstrapInstrument):
     ):
         
         super().__init__(
-            instrument_type = 'deposit', 
+            instrument_type = 'ois_swap', 
             tenor = tenor, 
             market_rate = market_rate
         )
@@ -22,14 +22,15 @@ class DepositInstrument(BootstrapInstrument):
 
     
     def implied_discount_factor(
-            self,
+            self, 
             curve = None
     ) -> float:
-        """ Simple compounding discount factor approximation """
+        """ Continuously compounded discount factor approximation """
         # convert market quote into decimal points
         rate = self.market_rate / 100.0
 
-        # continuous DF approximation
-        df = 1.0 / (1.0 + rate * self.maturity)
+        # DF approximation
+        df = np.exp(-rate * self.maturity)
 
         return df
+

@@ -13,8 +13,7 @@ FRED_CONFIG = {
     },
     # derivatives discounting curve
     'sofr': {
-        'ON': 'SOFR',
-        'FEDFUNDS': 'DFF'
+        'ON': 'SOFR'
     },
     # future proxies
     'futures': {

@@ -48,6 +48,14 @@ class FredCurveProvider(BaseMarketDataProvider):
             df.index.name = 'Date'
             df = df.sort_index()
 
+            # rename future columns
+            df = df.rename(
+                columns = {
+                    'TBill3M': '3M',
+                    'TBill6M': '6M'
+                }
+            )
+
             # save the dataframe locally
             df.to_csv(self.file_path)
 
