@@ -12,7 +12,6 @@ class ProjectionCurve():
         self.discount_curve = discount_curve
         
         self.maturities = self.discount_curve.maturities
-        self.dfs = self.discount_curve.discount_factors
 
         self.forward_rates = self._build_forward_curve()
 
@@ -37,8 +36,8 @@ class ProjectionCurve():
             t2 = self.maturities[i+1]
 
             # assign discount factors for start & end times
-            df1 = self.dfs[i]
-            df2 = self.dfs[i+1]
+            df1 = self.discount_curve.get_discount_factor(maturity = t1)
+            df2 = self.discount_curve.get_discount_factor(maturity = t2)
 
             # year fraction
             alpha = t2 - t1
@@ -51,13 +50,26 @@ class ProjectionCurve():
         return forwards
     
 
-    def get_forward_rate(
+    def forward_rate(
             self,
             start,
             end
     ):
         """ Returning forward rate of a start & end times tuple """
         return self.forward_rates[(start, end)]
+    
+    def get_forward_rate(
+            self,
+            start,
+            end
+    ):
+        """ Returning forward rate of an arbitrary (start, end) tuple """
+        df1 = self.discount_curve.get_discount_factor(maturity = start)
+        df2 = self.discount_curve.get_discount_factor(maturity = end)
+
+        alpha = end - start
+
+        return float((1 / alpha) * ((df1 / df2) - 1.0))
     
 
     def summary(self) -> pd.DataFrame:

@@ -14,7 +14,7 @@ class BootstrapCurveEngine:
     ):
         # validatng non-empty instruments
         if len(instruments) <= 0:
-            raise ValueError('No instruments supplied!')
+            raise ValueError('No instruments supplied! -> BootstrapCurveEngine')
 
         # ensure sorted instruments
         instruments = sorted(

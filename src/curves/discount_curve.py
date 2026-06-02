@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from scipy.interpolate import interp1d
 
 from src.curves.curve_snapshot import CurveSnapshot
 from src.curves.base_curve import BaseCurve
@@ -32,6 +33,8 @@ class DiscountCurve(BaseCurve):
             curve_snapshot = self.snapshot, 
             interpolation_method = self.interpolation_method
         )
+
+        self._build_df_interpolator()
     
     @property
     def maturities(self):
@@ -40,6 +43,32 @@ class DiscountCurve(BaseCurve):
     @property
     def discount_factors(self):
         return self._discount_factors
+    
+    def _build_df_interpolator(self):
+        """ Interpolate discount curve w.r.t. interpolation method """
+        self.df_interpolator = interp1d(
+            x = self._maturities,
+            y = self._discount_factors,
+            kind = self.interpolation_method,
+            fill_value = 'extrapolate'      # type: ignore
+        )
+    
+    def get_discount_factor(
+            self,
+            maturity
+    ):
+        """ Returns the discount factor of a given maturity """
+        return float(self.df_interpolator(maturity))
+    
+
+    def get_zero_rate(
+            self,
+            maturity
+    ):
+        """ Returns zero-rate of a given maturity """
+        df = self.get_discount_factor(maturity = maturity)
+
+        return float(-np.log(df) / maturity)
     
     
     def summary(self) -> pd.DataFrame:

@@ -14,7 +14,10 @@ class BootstrapInstrument(ABC):
         self.market_rate = market_rate
 
     @abstractmethod
-    def implied_discount_factor(self) -> float:
+    def implied_discount_factor(
+        self,
+        curve = None
+    ) -> float:
         """ Compute implied discount factor from market quote """
         raise NotImplementedError
 
