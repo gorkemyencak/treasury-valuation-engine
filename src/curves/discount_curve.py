@@ -60,16 +60,6 @@ class DiscountCurve(BaseCurve):
         """ Returns the discount factor of a given maturity """
         return float(self.df_interpolator(maturity))
     
-
-    def get_zero_rate(
-            self,
-            maturity
-    ):
-        """ Returns zero-rate of a given maturity """
-        df = self.get_discount_factor(maturity = maturity)
-
-        return float(-np.log(df) / maturity)
-    
     
     def summary(self) -> pd.DataFrame:
 

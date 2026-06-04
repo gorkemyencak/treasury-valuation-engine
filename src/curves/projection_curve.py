@@ -2,7 +2,7 @@ import pandas as pd
 
 from src.curves.discount_curve import DiscountCurve
 
-class ProjectionCurve():
+class ProjectionCurve:
     """ Forward rate projection curve """
     def __init__(
             self,
@@ -84,6 +84,3 @@ class ProjectionCurve():
                 for (start, end), rate in self.forward_rates.items()
             ]
         )
-
-
-

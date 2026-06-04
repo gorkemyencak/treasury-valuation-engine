@@ -32,6 +32,14 @@ class SwapPricer:
             - f_{i}: forward rate (projection curve)
             - alpha_{i}: accrual fraction
             - DF(T_{i}): discount factor
+
+    For a par swap:
+        S = (1 - DF(T)) / sum_{i=1,..,n} (alpha_{i} * DF(T_{i}))
+
+        where
+            - S: fair fixed swap rate
+            - alpha_{i}: accrual factor
+            - DF(T_{i}): discount factor at time i 
     '''
     def __init__(
             self,
@@ -95,6 +103,8 @@ class SwapPricer:
 
             pv += forward_rate * accrual * df
 
+            t1 = t2
+
         pv_float = swap.notional * pv
 
         return pv_float
@@ -112,6 +122,33 @@ class SwapPricer:
 
         # Pay-fixed IR swap
         return pv_float - pv_fixed if swap.pay_fixed == True else pv_fixed - pv_float
+    
+
+    def par_rate(
+            self,
+            swap
+    ):
+        """ Returns fair fixed swap rate of a par swap using fixed-leg payment dates """
+        payment_dates = swap.fixed_schedule.generate_schedule()
+
+        accrual = 1.0 / self.freq_map[swap.fixed_freq]
+
+        annuity = 0.0
+
+        for t in payment_dates:
+
+            df = self.discount_curve.get_discount_factor(maturity = t)
+
+            annuity += accrual * df
+        
+        # discount factor at maturity
+        maturity_df = self.discount_curve.get_discount_factor(maturity = swap.maturity)
+
+        # compute par rate
+        swap_par_rate = (1.0 - maturity_df) / annuity
+
+        return swap_par_rate
+
     
     def valuation_report(
             self,
