@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 
 from src.curves.discount_curve import DiscountCurve
 
@@ -16,6 +17,13 @@ class ZeroCurve:
         self.dfs = self.discount_curve.discount_factors
 
         self.zero_rates = self._build_zero_curve()
+
+        self.interpolator = interp1d(
+            x = list(self.zero_rates.keys()),
+            y = list(self.zero_rates.values()),
+            kind = 'linear',
+            fill_value = 'extrapolate'      # type: ignore
+        ) 
 
     def _build_zero_curve(self) -> dict:
         """ 
@@ -41,7 +49,17 @@ class ZeroCurve:
             maturity
     ):
         """ Returns zero-rate of a given maturity """
-        return self.zero_rates[maturity]
+        return float(self.interpolator(maturity))
+    
+
+    def update_zero_rate(
+            self,
+            maturity,
+            new_rate
+    ):
+        """ Update zero rate w.r.t. shocked curve for a given maturity on the zero curve """
+        self.zero_rates[maturity] = float(new_rate)
+
     
     def summary(self) -> pd.DataFrame:
 
@@ -50,5 +68,3 @@ class ZeroCurve:
             'ZeroRate': r * 100
         } for t, r in self.zero_rates.items()
         )
-
-
