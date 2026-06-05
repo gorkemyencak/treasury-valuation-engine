@@ -61,6 +61,27 @@ class IRRiskEngine:
 
         return shocked_dc, shocked_proj
     
+    def _scenario_dv01(
+            self,
+            swap,
+            shocked_zero_curve
+    ):
+        """ Generic scenario DV01 """
+        # compute base PV
+        pv_base = self._reprice(swap = swap)
+
+        # convert shocked zero curve -> discount curve, projection curve
+        shocked_dc, shocked_proj = self._build_shocked_curves(shocked_zero_curve = shocked_zero_curve)
+
+        # shocked PV
+        pv_shock = self._reprice(
+            swap = swap,
+            discount_curve = shocked_dc,
+            projection_curve = shocked_proj
+        )
+
+        return -(pv_shock - pv_base)
+    
     
     # risk analytics layer
     def pv01(
@@ -78,26 +99,16 @@ class IRRiskEngine:
                 - PV(r): current swap value
                 - PV(r + 1bp): shocked swap value
         """
-        # compute PV_base
-        pv_base = self._reprice(swap = swap)
-
         # shocked zero curve
         shocked_zero_curve = CurveShockEngine.parallel_shift(
             curve = self.zero_curve,
             parallel_shock_in_bps = shock_in_bps
         )
 
-        # convert shocked zero curve -> discount curve, projection curve
-        shocked_dc, shocked_proj = self._build_shocked_curves(shocked_zero_curve = shocked_zero_curve)
-
-        # shocked PV
-        pv_shock = self._reprice(
+        return -self._scenario_dv01(
             swap = swap,
-            discount_curve = shocked_dc,
-            projection_curve = shocked_proj
+            shocked_zero_curve = shocked_zero_curve
         )
-
-        return pv_shock - pv_base
     
 
     def dv01(
@@ -172,9 +183,6 @@ class IRRiskEngine:
             shock_in_bps: int = 1
     ):
         """ Key-rate DV01 for a +1bp move in rates at a given tenor in the term structure """
-        # compute PV_base
-        pv_base = self._reprice(swap = swap)
-
         # shocked zero curve
         shocked_zero_curve = CurveShockEngine.key_rate_shift(
             curve = self.zero_curve,
@@ -182,18 +190,51 @@ class IRRiskEngine:
             shock_in_bps = shock_in_bps
         )
 
-        # convert shocked zero curve -> discount curve, projection curve
-        shocked_dc, shocked_proj = self._build_shocked_curves(shocked_zero_curve = shocked_zero_curve)
-
-        # shocked PV
-        pv_shock = self._reprice(
+        return self._scenario_dv01(
             swap = swap,
-            discount_curve = shocked_dc,
-            projection_curve = shocked_proj
+            shocked_zero_curve = shocked_zero_curve
+        )
+    
+
+    def steepener_dv01(
+            self,
+            swap,
+            short_shock_in_bps: int = -20,
+            long_shock_in_bps: int = +20
+    ):
+        """ Curve steepener scenario DV01 """
+        # shocked zero curve
+        shocked_zero_curve = CurveShockEngine.steepener(
+            curve = self.zero_curve,
+            short_in_bps = short_shock_in_bps,
+            long_in_bps = long_shock_in_bps
         )
 
-        return -(pv_shock - pv_base)
-        
+        return self._scenario_dv01(
+            swap = swap,
+            shocked_zero_curve = shocked_zero_curve
+        )
+    
+
+    def flattener_dv01(
+            self,
+            swap,
+            short_shock_in_bps: int = +20,
+            long_shock_in_bps: int = -20
+    ):
+        """ Curve flattener scenario DV01 """
+        # shocked zero curve
+        shocked_zero_curve = CurveShockEngine.flattener(
+            curve = self.zero_curve,
+            short_in_bps = short_shock_in_bps,
+            long_in_bps = long_shock_in_bps
+        )
+
+        return self._scenario_dv01(
+            swap = swap,
+            shocked_zero_curve = shocked_zero_curve
+        )
+
 
     # reporting layer
     def ir_risk_report(
@@ -235,5 +276,25 @@ class IRRiskEngine:
                     shock_in_bps = shock_in_bps
                 )
                 for m in key_rates
+            ]
+        })
+    
+    def scenario_report(
+            self,
+            swap,
+            steepener_short_shock_in_bps: int = -20,
+            steepener_long_shock_in_bps: int = +20,
+            flattener_short_shock_in_bps: int = +20,
+            flattener_long_shock_in_bps: int = -20
+    ) -> pd.DataFrame:
+        """ Return curve steepener/flattener scenario DV01 of a swap """
+        return pd.DataFrame({
+            'Scenario': [
+                'Steepener',
+                'Flattener'
+            ],
+            'DV01': [
+                self.steepener_dv01(swap = swap, short_shock_in_bps = steepener_short_shock_in_bps, long_shock_in_bps = steepener_long_shock_in_bps),
+                self.flattener_dv01(swap = swap, short_shock_in_bps = flattener_short_shock_in_bps, long_shock_in_bps = flattener_long_shock_in_bps)
             ]
         })
