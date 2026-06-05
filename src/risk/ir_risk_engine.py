@@ -4,6 +4,7 @@ import pandas as pd
 from src.pricing.swap_pricer import SwapPricer
 
 from src.curves.zero_curve import ZeroCurve
+from src.curves.projection_curve import ProjectionCurve
 from src.curves.shocks.curve_shocks import CurveShockEngine
 
 class IRRiskEngine:
@@ -25,24 +26,40 @@ class IRRiskEngine:
         self.pricer = pricer
         self.zero_curve = zero_curve
 
-    # helper for repricing swaps w.r.t. shocked discount curve
+    # helper functions
     def _reprice(
             self,
             swap,
-            discount_curve = None
+            discount_curve = None,
+            projection_curve = None
     ):
         """ Reprice swap using shocked discount curve, reprice base PV if no discount curve is provided """
         if discount_curve is None:
+            discount_curve = self.pricer.discount_curve
 
-            return self.pricer.price(swap = swap)
+        if projection_curve is None:
+            projection_curve = self.pricer.projection_curve
         
         # shocked pricer
         shocked_pricer = SwapPricer(
             discount_curve = discount_curve,
-            projection_curve = self.pricer.projection_curve
+            projection_curve = projection_curve
         )
 
         return shocked_pricer.price(swap = swap)
+    
+    def _build_shocked_curves(
+            self,
+            shocked_zero_curve: ZeroCurve
+    ):
+        """ Build shocked discount and projection curves from shocked zero curve """
+        # discount curve
+        shocked_dc = shocked_zero_curve.to_discount_curve()
+
+        # projection curve
+        shocked_proj = ProjectionCurve(discount_curve = shocked_dc)
+
+        return shocked_dc, shocked_proj
     
     
     # risk analytics layer
@@ -70,13 +87,14 @@ class IRRiskEngine:
             parallel_shock_in_bps = shock_in_bps
         )
 
-        # convert shocked zero curve -> discount curve
-        shocked_dc = shocked_zero_curve.to_discount_curve()
+        # convert shocked zero curve -> discount curve, projection curve
+        shocked_dc, shocked_proj = self._build_shocked_curves(shocked_zero_curve = shocked_zero_curve)
 
         # shocked PV
         pv_shock = self._reprice(
             swap = swap,
-            discount_curve = shocked_dc
+            discount_curve = shocked_dc,
+            projection_curve = shocked_proj
         )
 
         return pv_shock - pv_base
@@ -117,8 +135,8 @@ class IRRiskEngine:
             parallel_shock_in_bps = shock_in_bps
         )
 
-        # shocked discount curve
-        up_shocked_dc = up_shock_zero_curve.to_discount_curve()
+        # shocked discount & projection curve
+        up_shocked_dc, up_shocked_proj = self._build_shocked_curves(shocked_zero_curve = up_shock_zero_curve)
 
         ### downward shock
         # shocked zero curve
@@ -127,19 +145,21 @@ class IRRiskEngine:
             parallel_shock_in_bps = -shock_in_bps
         )
 
-        # shocked discount curve
-        down_shocked_dc = down_shock_zero_curve.to_discount_curve()
+        # shocked discount & projection curve
+        down_shocked_dc, down_shocked_proj = self._build_shocked_curves(shocked_zero_curve = down_shock_zero_curve)
 
         # compute pv upward shock
         pv_shock_up = self._reprice(
             swap = swap,
-            discount_curve = up_shocked_dc
+            discount_curve = up_shocked_dc,
+            projection_curve = up_shocked_proj
         )
 
         # compute pv downward shock
         pv_shock_down = self._reprice(
             swap = swap,
-            discount_curve = down_shocked_dc
+            discount_curve = down_shocked_dc,
+            projection_curve = down_shocked_proj
         )
 
         return -(pv_shock_up - pv_shock_down) / 2.0
