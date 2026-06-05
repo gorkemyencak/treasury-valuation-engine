@@ -60,6 +60,38 @@ class ZeroCurve:
         """ Update zero rate w.r.t. shocked curve for a given maturity on the zero curve """
         self.zero_rates[maturity] = float(new_rate)
 
+        self.interpolator = interp1d(
+            x = list(self.zero_rates.keys()),
+            y = list(self.zero_rates.values()),
+            kind = 'linear',
+            fill_value = 'extrapolate'      # type: ignore
+        )
+
+    
+    def to_discount_curve(self):
+        """ 
+        Convert zero cure into discount curve 
+        
+        Formula:
+            DF(t) = e^{-z(t) * t}        
+        """
+        maturities = []
+        discount_factors = []
+
+        for maturity, zero_rate in self.zero_rates.items():
+
+            df = np.exp(-zero_rate * maturity)
+
+            maturities.append(maturity)
+            discount_factors.append(df)
+        
+        return DiscountCurve(
+            curve_snapshot = self.discount_curve.snapshot,
+            maturities = maturities,
+            discount_factors = discount_factors,
+            interpolation_method = self.discount_curve.interpolation_method
+        )
+
     
     def summary(self) -> pd.DataFrame:
 

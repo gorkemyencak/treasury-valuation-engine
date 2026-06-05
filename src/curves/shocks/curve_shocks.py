@@ -3,6 +3,7 @@ import pandas as pd
 from copy import deepcopy
 
 from src.curves.base_curve import BaseCurve
+from src.curves.zero_curve import ZeroCurve
 
 class CurveShockEngine:
     """
@@ -11,7 +12,7 @@ class CurveShockEngine:
 
     @staticmethod
     def parallel_shift(
-        curve,
+        curve: ZeroCurve,
         parallel_shock_in_bps: int
     ):
         """ Parallel shift entire curve by parallel_shock_in_bps """
@@ -32,7 +33,7 @@ class CurveShockEngine:
 
     @staticmethod
     def key_rate_shift(
-        curve,
+        curve: ZeroCurve,
         maturity: float,
         shock_in_bps: int
     ):
@@ -60,7 +61,7 @@ class CurveShockEngine:
     
     @staticmethod
     def steepener(
-        curve,
+        curve: ZeroCurve,
         short_in_bps: int = -20,
         long_in_bps: int = +20
     ):
@@ -91,7 +92,7 @@ class CurveShockEngine:
 
     @staticmethod
     def flattener(
-        curve,
+        curve: ZeroCurve,
         short_in_bps: int = +20,
         long_in_bps: int = -20
     ):
@@ -122,7 +123,7 @@ class CurveShockEngine:
     
     @staticmethod
     def shock_report(
-        curve,
+        curve: ZeroCurve,
         shocked_curve
     ) -> pd.DataFrame:
         """ Returns a shock report comparing base and shocked curve as well as the curve shock in bps """
