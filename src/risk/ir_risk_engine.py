@@ -165,12 +165,42 @@ class IRRiskEngine:
         return -(pv_shock_up - pv_shock_down) / 2.0
     
 
+    def key_rate_dv01(
+            self,
+            swap,
+            maturity: float,
+            shock_in_bps: int = 1
+    ):
+        """ Key-rate DV01 for a +1bp move in rates at a given tenor in the term structure """
+        # compute PV_base
+        pv_base = self._reprice(swap = swap)
+
+        # shocked zero curve
+        shocked_zero_curve = CurveShockEngine.key_rate_shift(
+            curve = self.zero_curve,
+            maturity = maturity,
+            shock_in_bps = shock_in_bps
+        )
+
+        # convert shocked zero curve -> discount curve, projection curve
+        shocked_dc, shocked_proj = self._build_shocked_curves(shocked_zero_curve = shocked_zero_curve)
+
+        # shocked PV
+        pv_shock = self._reprice(
+            swap = swap,
+            discount_curve = shocked_dc,
+            projection_curve = shocked_proj
+        )
+
+        return -(pv_shock - pv_base)
+        
+
     # reporting layer
     def ir_risk_report(
             self,
             swap,
             shock_in_bps: int = 1
-    ):
+    ) -> pd.DataFrame:
         """ Return IR risk metrics of a swap """
         return pd.DataFrame({
             'Metric': [
@@ -184,5 +214,26 @@ class IRRiskEngine:
                 self.pv01(swap = swap, shock_in_bps = shock_in_bps),
                 self.dv01(swap = swap, shock_in_bps = shock_in_bps),
                 self.dv01_central(swap = swap, shock_in_bps = shock_in_bps)
+            ]
+        })
+    
+    def key_rate_report(
+            self,
+            swap,
+            shock_in_bps: int = 1
+    ) -> pd.DataFrame:
+        """ Return key-rate DV01 of a swap for all key-rate tenors """
+
+        key_rates = [0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0, 20.0, 30.0 ]
+
+        return pd.DataFrame({
+            'Maturity': key_rates,
+            'KRDV01': [
+                self.key_rate_dv01(
+                    swap = swap,
+                    maturity = m,
+                    shock_in_bps = shock_in_bps
+                )
+                for m in key_rates
             ]
         })
