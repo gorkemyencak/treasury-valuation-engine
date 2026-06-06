@@ -349,7 +349,7 @@ class IRRiskEngine:
     ) -> pd.DataFrame:
         """ Return key-rate DV01 of a swap for all key-rate tenors """
 
-        key_rates = [0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0, 20.0, 30.0 ]
+        key_rates = [0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0, 20.0, 30.0]
 
         return pd.DataFrame({
             'Maturity': key_rates,

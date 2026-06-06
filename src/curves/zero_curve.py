@@ -18,12 +18,22 @@ class ZeroCurve:
 
         self.zero_rates = self._build_zero_curve()
 
-        self.interpolator = interp1d(
+        self.interpolator = self._build_interpolator()
+
+
+    def _build_interpolator(
+            self,
+            kind: str = 'linear',
+            fill_value: str = 'extrapolate'
+    ):
+        """ Build interpolator given a set of zero-rate tenors and values """
+        return interp1d(
             x = list(self.zero_rates.keys()),
             y = list(self.zero_rates.values()),
-            kind = 'linear',
-            fill_value = 'extrapolate'      # type: ignore
+            kind = kind,
+            fill_value = fill_value         # type: ignore
         ) 
+    
 
     def _build_zero_curve(self) -> dict:
         """ 
@@ -60,12 +70,7 @@ class ZeroCurve:
         """ Update zero rate w.r.t. shocked curve for a given maturity on the zero curve """
         self.zero_rates[maturity] = float(new_rate)
 
-        self.interpolator = interp1d(
-            x = list(self.zero_rates.keys()),
-            y = list(self.zero_rates.values()),
-            kind = 'linear',
-            fill_value = 'extrapolate'      # type: ignore
-        )
+        self.interpolator = self._build_interpolator()
 
     
     def to_discount_curve(self):
@@ -92,7 +97,7 @@ class ZeroCurve:
             interpolation_method = self.discount_curve.interpolation_method
         )
 
-    
+
     def summary(self) -> pd.DataFrame:
 
         return pd.DataFrame({
