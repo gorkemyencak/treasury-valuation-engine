@@ -110,7 +110,6 @@ class IRRiskEngine:
             shocked_zero_curve = shocked_zero_curve
         )
     
-
     def dv01(
             self,
             swap,
@@ -126,7 +125,6 @@ class IRRiskEngine:
             swap = swap,
             shock_in_bps = shock_in_bps
         )
-    
     
     def dv01_central(
             self,
@@ -175,7 +173,6 @@ class IRRiskEngine:
 
         return -(pv_shock_up - pv_shock_down) / 2.0
     
-
     def key_rate_dv01(
             self,
             swap,
@@ -195,7 +192,6 @@ class IRRiskEngine:
             shocked_zero_curve = shocked_zero_curve
         )
     
-
     def steepener_dv01(
             self,
             swap,
@@ -215,7 +211,6 @@ class IRRiskEngine:
             shocked_zero_curve = shocked_zero_curve
         )
     
-
     def flattener_dv01(
             self,
             swap,
@@ -235,7 +230,6 @@ class IRRiskEngine:
             shocked_zero_curve = shocked_zero_curve
         )
     
-
     def short_rate_up_dv01(
             self,
             swap,
@@ -253,7 +247,6 @@ class IRRiskEngine:
             shocked_zero_curve = shocked_zero_curve
         )
     
-
     def short_rate_down_dv01(
             self,
             swap,
@@ -270,6 +263,59 @@ class IRRiskEngine:
             swap = swap,
             shocked_zero_curve = shocked_zero_curve
         )
+    
+    def convexity(
+            self,
+            swap,
+            shock_in_bps: int = 1
+    ):
+        """ 
+        Non-linear extension to swap valuation 
+        
+        Convexity Formula:
+            Convexity = [PV(r + Δr) - 2 * PV(r) + PV(r - Δr)] / (Δr)^2
+        """
+        # compute base PV
+        pv_base = self._reprice(swap = swap)
+
+        ### upward shock
+        # shocked zero curve
+        up_shock_zero_curve = CurveShockEngine.parallel_shift(
+            curve = self.zero_curve,
+            parallel_shock_in_bps = shock_in_bps
+        )
+
+        # shocked discount & projection curve
+        up_shocked_dc, up_shocked_proj = self._build_shocked_curves(shocked_zero_curve = up_shock_zero_curve)
+
+        ### downward shock
+        # shocked zero curve
+        down_shock_zero_curve = CurveShockEngine.parallel_shift(
+            curve = self.zero_curve,
+            parallel_shock_in_bps = -shock_in_bps
+        )
+
+        # shocked discount & projection curve
+        down_shocked_dc, down_shocked_proj = self._build_shocked_curves(shocked_zero_curve = down_shock_zero_curve)
+
+        # compute pv upward shock
+        pv_shock_up = self._reprice(
+            swap = swap,
+            discount_curve = up_shocked_dc,
+            projection_curve = up_shocked_proj
+        )
+
+        # compute pv downward shock
+        pv_shock_down = self._reprice(
+            swap = swap,
+            discount_curve = down_shocked_dc,
+            projection_curve = down_shocked_proj
+        )
+
+        # convert shock_in_bps into decimal
+        shock = shock_in_bps / 10000.0        
+
+        return (pv_shock_up - 2 * pv_base + pv_shock_down) / (shock ** 2)
 
 
     # reporting layer
@@ -284,13 +330,15 @@ class IRRiskEngine:
                 'PV',
                 'PV01',
                 'DV01',
-                'Central DV01'
+                'Central DV01',
+                'Convexity'
             ],
             'Value': [
                 self.pricer.price(swap = swap),
                 self.pv01(swap = swap, shock_in_bps = shock_in_bps),
                 self.dv01(swap = swap, shock_in_bps = shock_in_bps),
-                self.dv01_central(swap = swap, shock_in_bps = shock_in_bps)
+                self.dv01_central(swap = swap, shock_in_bps = shock_in_bps),
+                self.convexity(swap = swap, shock_in_bps = shock_in_bps)
             ]
         })
     
@@ -363,5 +411,36 @@ class IRRiskEngine:
                 flattener,
                 short_rate_up,
                 short_rate_down
+            ]
+        })
+    
+    def dv01_recon_report(
+            self,
+            swap,
+            shock_in_bps: int = 1
+    ) -> pd.DataFrame:
+        """ DV01 reconciliation report comparing key-rate sv01 and parallel dv01 of a swap """
+        key_rate_report = self.key_rate_report(
+            swap = swap,
+            shock_in_bps = shock_in_bps
+        )
+
+        key_rate_sum = key_rate_report['KRDV01'].sum()
+
+        parallel_dv01 = self.dv01(
+            swap = swap,
+            shock_in_bps = shock_in_bps
+        )
+
+        return pd.DataFrame({
+            'Metric': [
+                'Parallel DV01',
+                'Sum KRDV01',
+                'Difference'
+            ],
+            'Value': [
+                parallel_dv01,
+                key_rate_sum,
+                parallel_dv01 - key_rate_sum
             ]
         })

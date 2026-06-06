@@ -125,10 +125,10 @@ class CurveShockEngine:
     def short_rate_up(
         curve: ZeroCurve,
         max_shock_in_bps: int = +100,
-        decay: int = 5
+        decay: float = 5.0
     ):
-        """ 
-        Short rate bump with exponential decay 
+        """
+        Short rate bump with exponential decay
         
             Shock(t) = Shock_max * e^{-t/decay}
         """
@@ -156,7 +156,7 @@ class CurveShockEngine:
     def short_rate_down(
         curve: ZeroCurve,
         max_shock_in_bps: int = -100,
-        decay: int = 5
+        decay: float = 5.0
     ):
         """ 
         Short rate drop with exponential decay 
