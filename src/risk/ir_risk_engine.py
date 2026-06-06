@@ -234,6 +234,42 @@ class IRRiskEngine:
             swap = swap,
             shocked_zero_curve = shocked_zero_curve
         )
+    
+
+    def short_rate_up_dv01(
+            self,
+            swap,
+            max_shock_in_bps: int = 100
+    ):
+        """ Short rate bump scenario DV01 """
+        # shocked zero curve
+        shocked_zero_curve = CurveShockEngine.short_rate_up(
+            curve = self.zero_curve,
+            max_shock_in_bps = max_shock_in_bps
+        )
+
+        return self._scenario_dv01(
+            swap = swap,
+            shocked_zero_curve = shocked_zero_curve
+        )
+    
+
+    def short_rate_down_dv01(
+            self,
+            swap,
+            max_shock_in_bps: int = -100
+    ):
+        """ Short rate drop scenario DV01 """
+        # shocked zero curve
+        shocked_zero_curve = CurveShockEngine.short_rate_down(
+            curve = self.zero_curve,
+            max_shock_in_bps = max_shock_in_bps
+        )
+
+        return self._scenario_dv01(
+            swap = swap,
+            shocked_zero_curve = shocked_zero_curve
+        )
 
 
     # reporting layer
@@ -296,5 +332,36 @@ class IRRiskEngine:
             'DV01': [
                 self.steepener_dv01(swap = swap, short_shock_in_bps = steepener_short_shock_in_bps, long_shock_in_bps = steepener_long_shock_in_bps),
                 self.flattener_dv01(swap = swap, short_shock_in_bps = flattener_short_shock_in_bps, long_shock_in_bps = flattener_long_shock_in_bps)
+            ]
+        })
+    
+    def basel_irrbb_report(
+            self,
+            swap
+    ) -> pd.DataFrame:
+        # Basel shock scenarios
+        parallel_up = self.dv01(swap = swap, shock_in_bps = 100)
+        parallel_down = self.dv01(swap = swap, shock_in_bps = -100)
+        steepener = self.steepener_dv01(swap = swap, short_shock_in_bps = -60, long_shock_in_bps = 60)
+        flattener = self.flattener_dv01(swap = swap, short_shock_in_bps = 60, long_shock_in_bps = -60)
+        short_rate_up = self.short_rate_up_dv01(swap = swap)
+        short_rate_down = self.short_rate_down_dv01(swap = swap)
+
+        return pd.DataFrame({
+            'Scenario': [
+                'Parallel Up',
+                'Parallel Down',
+                'Steepener',
+                'Flattener',
+                'Short Rate Up',
+                'Short Rate Down'
+            ],
+            'DV01': [
+                parallel_up,
+                parallel_down,
+                steepener,
+                flattener,
+                short_rate_up,
+                short_rate_down
             ]
         })

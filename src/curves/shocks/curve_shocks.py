@@ -119,7 +119,69 @@ class CurveShockEngine:
             )
 
         return shocked_curve
+    
 
+    @staticmethod
+    def short_rate_up(
+        curve: ZeroCurve,
+        max_shock_in_bps: int = +100,
+        decay: int = 5
+    ):
+        """ 
+        Short rate bump with exponential decay 
+        
+            Shock(t) = Shock_max * e^{-t/decay}
+        """
+        shocked_curve = deepcopy(curve)
+
+        max_shock = max_shock_in_bps / 10000.0
+
+        maturities = np.array(list(shocked_curve.zero_rates.keys()))
+
+        for maturity in maturities:
+
+            weight = np.exp(-maturity / decay)
+
+            shock = max_shock * weight
+
+            shocked_curve.update_zero_rate(
+                maturity = maturity,
+                new_rate = shocked_curve.zero_rates[maturity] + shock
+            )
+
+        return shocked_curve
+    
+
+    @staticmethod
+    def short_rate_down(
+        curve: ZeroCurve,
+        max_shock_in_bps: int = -100,
+        decay: int = 5
+    ):
+        """ 
+        Short rate drop with exponential decay 
+        
+            Shock(t) = Shock_max * e^{-t/decay}
+        """
+        shocked_curve = deepcopy(curve)
+
+        max_shock = max_shock_in_bps / 10000.0
+
+        maturities = np.array(list(shocked_curve.zero_rates.keys()))
+
+        for maturity in maturities:
+
+            weight = np.exp(-maturity / decay)
+
+            shock = max_shock * weight
+
+            shocked_curve.update_zero_rate(
+                maturity = maturity,
+                new_rate = shocked_curve.zero_rates[maturity] + shock
+            )
+
+        return shocked_curve
+    
     
     @staticmethod
     def shock_report(
