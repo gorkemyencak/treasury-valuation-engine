@@ -74,7 +74,7 @@ class HullWhiteSimulator:
             n_paths: int = 100,
             steps_per_year: int = 12
     ):
-        """ Hull-white short-rate single path simulation model """
+        """ Hull-white short-rate n-path simulation model """
         paths = []
 
         for _ in range(n_paths):

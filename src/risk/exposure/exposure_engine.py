@@ -19,7 +19,7 @@ class ExposureEngine:
     """
     def __init__(
             self,
-            pricer
+            pricer: SwapPricer
     ):
         # attributes
         self.pricer = pricer
