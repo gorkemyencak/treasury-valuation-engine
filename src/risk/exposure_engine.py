@@ -209,6 +209,36 @@ class ExposureEngine:
             steps_per_year = steps_per_year
         )
 
+        # expected exposure
         profile['EE'] = profile['Exposure']
 
-        return profile[['Time', 'EE']]
+        # expected negative exposure
+        profile['ENE'] = np.maximum(-profile['PV'], 0)
+
+        return profile[['Time', 'EE', 'ENE']]
+    
+
+    # reporting layer
+    def exposure_report(
+            self,
+            swap,
+            steps_per_year: int = 2
+    ):
+        """ Summary exposure metrics """
+        profile = self.exposure_profile(
+            swap = swap,
+            steps_per_year = steps_per_year
+        )
+
+        return pd.DataFrame({
+            'Metric': [
+                'Current Exposure',
+                'Max Exposure',
+                'Average Exposure'
+            ],
+            'Value': [
+                profile['Exposure'].iloc[0],
+                profile['Exposure'].max(),
+                profile['Exposure'].mean()
+            ]
+        })
