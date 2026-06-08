@@ -20,6 +20,9 @@ class HullWhiteSimulator:
         self.long_run_rate = r0 if long_run_rate is None else long_run_rate
         self.random_seed = random_seed
 
+        if self.random_seed is not None:
+            np.random.seed(self.random_seed)
+
     def simulate_single_path(
             self,
             maturity: float,
@@ -37,10 +40,6 @@ class HullWhiteSimulator:
                 - sigma: volatility
                 - W_{t}: brownian motion
         """
-        if self.random_seed is not None:
-            np.random.seed(self.random_seed)
-
-
         cf_grid = CashflowGridder.cf_grid(
             maturity = maturity,
             steps_per_year = steps_per_year

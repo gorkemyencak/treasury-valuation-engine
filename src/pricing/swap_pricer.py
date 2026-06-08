@@ -56,7 +56,8 @@ class SwapPricer:
 
     def _fixed_leg_pv(
             self,
-            swap
+            swap,
+            valuation_time = 0.0
     ) -> float:
         """ Compute fixed-leg PV """
         pv = 0.0
@@ -66,6 +67,9 @@ class SwapPricer:
         fixed_rate = swap.fixed_rate / 100.0
 
         for t in swap.fixed_schedule.generate_schedule():
+
+            if t <= valuation_time:
+                continue
             
             df = self.discount_curve.get_discount_factor(maturity = t)
 
@@ -78,7 +82,8 @@ class SwapPricer:
 
     def _float_leg_pv(
             self,
-            swap
+            swap,
+            valuation_time = 0.0
     ) -> float:
         """ Compute floating-leg PV """
         pv = 0.0
@@ -89,6 +94,9 @@ class SwapPricer:
         t1 = 0
 
         for t in swap.float_schedule.generate_schedule():
+
+            if t <= valuation_time:
+                continue
         
             # end time
             t2 = t
@@ -112,13 +120,21 @@ class SwapPricer:
 
     def price(
             self,
-            swap
+            swap,
+            valuation_time = 0.0
+
     ) -> float:
         """ Return PV of an IR swap """
         
         # compute fixed and floating leg PVs
-        pv_fixed = self._fixed_leg_pv(swap = swap)
-        pv_float = self._float_leg_pv(swap = swap)
+        pv_fixed = self._fixed_leg_pv(
+            swap = swap, 
+            valuation_time = valuation_time
+        )
+        pv_float = self._float_leg_pv(
+            swap = swap,
+            valuation_time = valuation_time
+        )
 
         # Pay-fixed IR swap
         return pv_float - pv_fixed if swap.pay_fixed == True else pv_fixed - pv_float

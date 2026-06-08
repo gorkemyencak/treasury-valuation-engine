@@ -43,7 +43,7 @@ class MonteCarloExposureEngine:
         r0 = min(self.zero_curve.zero_rates.values())
 
         # stochastic shock
-        shift_bps = int((simulated_rate - r0) * 10000)
+        shift_bps = (simulated_rate - r0) * 10000
 
         return CurveShockEngine.parallel_shift(
             curve = self.zero_curve,
@@ -66,7 +66,8 @@ class MonteCarloExposureEngine:
     def _scenario_pv(
             self,
             swap,
-            simulated_rate
+            simulated_rate,
+            valuation_time
     ):
         """ Repricing swap under scenario curve """
         # construct zero curve under scenario
@@ -81,16 +82,24 @@ class MonteCarloExposureEngine:
             projection_curve = scenario_proj
         )
 
-        return scenario_pricer.price(swap = swap)
+        # repricing aged swap
+        swap_aged = swap.aged_swap(valuation_time = valuation_time)
+
+        if swap_aged.maturity <= 0:
+            return 0.0
+
+        return scenario_pricer.price(swap = swap_aged)
     
     # risk analytics layer
     def simulate_pv_matrix(
             self,
             swap,
-            n_paths = 2500,
-            steps_per_year = 4
+            n_paths: int = 2500,
+            steps_per_year: int = 4
     ):
         """ Build future values of a trade under stochastic scenario curves """
+        dt = 1 / steps_per_year
+
         # generate simulated scenario paths -> (n_paths x n_times)
         scenario_paths = self.simulator.simulate_multi_paths(
             maturity = swap.maturity,
@@ -107,7 +116,8 @@ class MonteCarloExposureEngine:
 
                 pv_matrix[path, time] = self._scenario_pv(
                     swap = swap,
-                    simulated_rate = scenario_paths[path, time]
+                    simulated_rate = scenario_paths[path, time],
+                    valuation_time = time * dt
                 )
         
         return pv_matrix
@@ -115,8 +125,8 @@ class MonteCarloExposureEngine:
     def expected_exposure(
             self,
             swap,
-            n_paths = 2500,
-            steps_per_year = 4
+            n_paths: int = 2500,
+            steps_per_year: int = 4
     ):
         """ 
         Return expected exposure at a future date
@@ -151,8 +161,8 @@ class MonteCarloExposureEngine:
     def expected_negative_exposure(
             self,
             swap,
-            n_paths = 2500,
-            steps_per_year = 4
+            n_paths: int = 2500,
+            steps_per_year: int = 4
     ):
         """ 
         Return expected negative exposure at a future date
@@ -174,27 +184,119 @@ class MonteCarloExposureEngine:
         )
 
         # negative exposures
-        negative_exposures = np.minimum(pv_matrix, 0)
+        negative_exposures = np.where(
+            pv_matrix < 0, 
+            pv_matrix, 
+            0
+        )
 
         # expected negatve exposures -> (1 x n_times)
-        expected_negative_exposures = -1 * negative_exposures.mean(axis = 0)
+        expected_negative_exposures = -negative_exposures.mean(axis = 0)
 
         return pd.DataFrame({
             'Times': cf_grid,
             'ENE': expected_negative_exposures
         })
     
-    def potential_future_exposure(self):
-        return None
+    def potential_future_exposure(
+            self,
+            swap,
+            percentile: float = 95.0,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
+    ):
+        """ 
+        Return potential future exposure at a future date 
+        
+        Formula:
+            PFE_{t} = Quantile_{q}(max(V_{t}, 0))
+        """
+        # cf grid
+        cf_grid = CashflowGridder.cf_grid(
+            maturity = swap.maturity,
+            steps_per_year = steps_per_year
+        )
 
-    def expected_positive_exposure(self):
-        return None
+        # PV matrix -> (n_paths x n_times)
+        pv_matrix = self.simulate_pv_matrix(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
 
+        # positive exposures
+        positive_exposures = np.maximum(pv_matrix, 0)
 
+        # percentile accross n_paths
+        pfe = np.percentile(
+            positive_exposures,
+            percentile,
+            axis = 0
+        )
 
+        return pd.DataFrame({
+            'Times': cf_grid,
+            f'PFE_{percentile:.0f}%': pfe
+        })
 
+    def expected_positive_exposure(
+            self,
+            swap,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
 
+    ):
+        """
+        Return expected positive exposure at a future date
 
+        Formula:
+            EPE = (1/N) sum_{i=1,..,n}(EE_{t_i})        
+        """
+        # expected exposure
+        expected_exposure = self.expected_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
 
+        # expected positive exposure
+        epe = expected_exposure['EE'].mean()
 
+        return float(epe)
+    
+    # reporting layer
+    def mc_exposure_report(
+            self,
+            swap,
+            percentile: float = 95.0,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
+    ):
+        """ Summary table reporting exposure metrics under stochastic future curves """
+        ee = self.expected_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
 
+        ene = self.expected_negative_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        pfe = self.potential_future_exposure(
+            swap = swap,
+            percentile = percentile,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        report = (
+            ee
+            .merge(ene, on = 'Times')
+            .merge(pfe, on = 'Times')
+        )
+
+        return report
+       
