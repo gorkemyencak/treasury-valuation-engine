@@ -40,7 +40,8 @@ class MonteCarloExposureEngine:
             simulated_rate
     ):
         """ Build a scenario curve by stochastic parallel shock """
-        r0 = min(self.zero_curve.zero_rates.values())
+        #r0 = min(self.zero_curve.zero_rates.values())
+        r0 = self.simulator.r0
 
         # stochastic shock
         shift_bps = (simulated_rate - r0) * 10000

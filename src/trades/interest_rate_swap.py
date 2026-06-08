@@ -33,6 +33,9 @@ class InterestRateSwap:
             frequency = self.float_freq
         )
 
+        self.valuation_time = 0.0
+
+
     @property
     def direction(self):
         return 'PAY_FIXED' if self.pay_fixed else 'RECEIVE_FIXED'
@@ -47,6 +50,9 @@ class InterestRateSwap:
 
         # ageing effect on maturity
         swap_aged.maturity = max(self.maturity - valuation_time, 0)
+
+        # attribute
+        swap_aged.valuation_time = valuation_time
 
         # replace schedules considering ageing effect
         swap_aged.fixed_schedule = self.fixed_schedule.aged_schedule(valuation_time = valuation_time)

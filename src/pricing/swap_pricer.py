@@ -56,24 +56,35 @@ class SwapPricer:
 
     def _fixed_leg_pv(
             self,
-            swap,
-            valuation_time = 0.0
+            swap
     ) -> float:
         """ Compute fixed-leg PV """
         pv = 0.0
 
-        accrual = 1.0 / self.freq_map[swap.fixed_freq]
+        # payment dates relative to valuation date
+        aged_dates = swap.fixed_schedule.generate_schedule()
+
+        # payment dates on original timeline
+        original_dates = swap.fixed_schedule.generate_original_schedule()
+
+        #if swap.valuation_time is not None:
+        #    valuation_time = swap.valuation_time
+
+        valuation_time = getattr(swap, 'valuation_time', 0)
+
+        previous_date = valuation_time
 
         fixed_rate = swap.fixed_rate / 100.0
 
-        for t in swap.fixed_schedule.generate_schedule():
+        for payment_date, discount_time in zip(original_dates, aged_dates):
 
-            if t <= valuation_time:
-                continue
-            
-            df = self.discount_curve.get_discount_factor(maturity = t)
+            accrual = payment_date - previous_date
+
+            df = self.discount_curve.get_discount_factor(maturity = discount_time)
 
             pv += accrual * df
+
+            previous_date = payment_date
         
         pv_fixed = swap.notional * fixed_rate * pv
 
@@ -82,36 +93,39 @@ class SwapPricer:
 
     def _float_leg_pv(
             self,
-            swap,
-            valuation_time = 0.0
+            swap
     ) -> float:
         """ Compute floating-leg PV """
         pv = 0.0
 
-        accrual = 1.0 / self.freq_map[swap.float_freq]
+        # payment dates relative to valuation date
+        aged_dates = swap.float_schedule.generate_schedule() 
 
-        # start time
-        t1 = 0
+        # payment dates on original timeline
+        original_dates = swap.float_schedule.generate_original_schedule()
 
-        for t in swap.float_schedule.generate_schedule():
+        #if swap.valuation_time is not None:
+        #    valuation_time = swap.valuation_time
 
-            if t <= valuation_time:
-                continue
-        
-            # end time
-            t2 = t
+        valuation_time = getattr(swap, 'valuation_time', 0)
+
+        previous_date = valuation_time
+
+        for payment_date, discount_time in zip(original_dates, aged_dates):
+
+            accrual = payment_date - previous_date
 
             # compute forward rate
             forward_rate = self.projection_curve.get_forward_rate(
-                start = t1,
-                end = t2
+                start = previous_date,
+                end = payment_date
             )
 
-            df = self.discount_curve.get_discount_factor(maturity = t2)
+            df = self.discount_curve.get_discount_factor(maturity = discount_time)
 
             pv += forward_rate * accrual * df
 
-            t1 = t2
+            previous_date = payment_date
 
         pv_float = swap.notional * pv
 
@@ -120,21 +134,12 @@ class SwapPricer:
 
     def price(
             self,
-            swap,
-            valuation_time = 0.0
-
+            swap
     ) -> float:
         """ Return PV of an IR swap """
-        
         # compute fixed and floating leg PVs
-        pv_fixed = self._fixed_leg_pv(
-            swap = swap, 
-            valuation_time = valuation_time
-        )
-        pv_float = self._float_leg_pv(
-            swap = swap,
-            valuation_time = valuation_time
-        )
+        pv_fixed = self._fixed_leg_pv(swap = swap)
+        pv_float = self._float_leg_pv(swap = swap)
 
         # Pay-fixed IR swap
         return pv_float - pv_fixed if swap.pay_fixed == True else pv_fixed - pv_float
