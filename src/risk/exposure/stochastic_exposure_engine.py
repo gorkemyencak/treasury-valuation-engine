@@ -265,6 +265,64 @@ class MonteCarloExposureEngine:
 
         return float(epe)
     
+    def effective_expected_exposure(
+            self,
+            swap,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
+    ):
+        """ 
+        Return effective expected exposure at a future date
+
+        EEE is the running max of EE from time t up to the time horizon 
+        
+        Formula:
+            Effective EE(t_{i}) = max(Effective EE(t_{i-1}), EE(t_{i})) 
+        """
+        # expected exposure
+        expected_exposure = self.expected_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        effective_ee = []
+        running_max = 0.0
+
+        for ee in expected_exposure['EE']:
+
+            running_max = max(running_max, ee)
+
+            effective_ee.append(running_max)
+
+        return pd.DataFrame({
+            'Times': expected_exposure['Times'],
+            'EffectiveEE': effective_ee
+        })
+    
+    def effected_expected_positive_exposure(
+            self,
+            swap,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
+    ):
+        """
+        Return effective expected positive exposure at a future date
+        
+        Effective EPE is the weighted average of effective EE
+
+        Formula:
+            Effective EPE = (1/N) * sum_{i=1,..,n} (Effective EE(t_{i}))
+        """
+        # effective expected exposure
+        effective_ee = self.effective_expected_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        return float(effective_ee['EffectiveEE'].mean())
+    
     # reporting layer
     def mc_exposure_report(
             self,
@@ -293,11 +351,63 @@ class MonteCarloExposureEngine:
             steps_per_year = steps_per_year
         )
 
+        effective_ee = self.effective_expected_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
         report = (
             ee
             .merge(ene, on = 'Times')
             .merge(pfe, on = 'Times')
+            .merge(effective_ee, on = 'Times')
         )
 
         return report
-       
+    
+    def full_exposure_report(
+            self,
+            swap,
+            percentile: float = 95.0,
+            n_paths: int = 2500,
+            steps_per_year: int = 4
+    ):
+        """ Full exposure report """
+        report = self.mc_exposure_report(
+            swap = swap,
+            percentile = percentile,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        epe = self.expected_positive_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        effective_epe = self.effected_expected_positive_exposure(
+            swap = swap,
+            n_paths = n_paths,
+            steps_per_year = steps_per_year
+        )
+
+        return pd.DataFrame({
+            'Metric': [
+                'Current Exposure',
+                'Peak EE',
+                'Peak ENE',
+                'Peak PFE',
+                'EPE',
+                'Effective EPE'
+            ],
+            'Value': [
+                report['EE'].iloc[0],
+                report['EE'].max(),
+                report['ENE'].max(),
+                report[f'PFE_{percentile:.0f}%'].max(),
+                epe,
+                effective_epe
+            ]
+        })       
