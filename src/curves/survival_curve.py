@@ -29,8 +29,8 @@ class SurvivalCurve:
 
     def default_probability(
             self,
-            start,
-            end
+            start: float,
+            end: float
     ):
         """ Return the default probability between two specific points in time """
         # compute PD
