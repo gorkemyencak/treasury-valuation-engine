@@ -4,7 +4,11 @@ import pandas as pd
 from src.utils.cashflow_grid import CashflowGridder
 
 class HullWhite2FactorSimulator:
-    """ Gaussian 2-factor Hull-White curve simulator """
+    """ 
+    Gaussian 2-factor Hull-White curve simulator 
+    
+    HullWhite2FactorSimulator generates factor paths that will then be used to construct the full yield curve
+    """
     def __init__(
             self,
             r0: float,

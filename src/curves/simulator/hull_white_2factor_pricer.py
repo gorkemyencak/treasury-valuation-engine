@@ -1,11 +1,12 @@
 import numpy as np
-import pandas as pd
 
 from src.curves.zero_curve import ZeroCurve
 
 class HullWhite2FactorPricer:
     """ 
     Gaussian 2-factor Hull-White bond pricer engine 
+
+    HullWhite2FactorPricer prices the instruments using generated factor paths without needing a full yield curve
     
     Bond Pricing Formula:
         P(t, T) = (P(0, T) / P(0, t)) * e^{-B_{1}(t, T) * x_{t} - B_{2}(t, T) * y_{t} + (1/2) * V(t, T)}
@@ -35,6 +36,8 @@ class HullWhite2FactorPricer:
         self.sigma1 = sigma1
         self.sigma2 = sigma2
         self.rho = rho
+
+        self.discount_curve = self.zero_curve.to_discount_curve()
     
     # B terms
     def B1(self, t, T):
@@ -81,11 +84,13 @@ class HullWhite2FactorPricer:
             x_t,
             y_t
     ):
-        """ Zero-coupon bond pricing function with 2-additive-factor Hull-White parameters """
-        # P(t, T) = (P(0, T) / P(0, t)) * e^{-B_{1}(t, T) * x_{t} - B_{2}(t, T) * y_{t} + (1/2) * V(t, T)}
+        """ 
+        Zero-coupon bond pricing function with 2-additive-factor Hull-White parameters 
+            -> DF(t, T) = P(t, T)
+        """
         # discount factors
-        P_0T = self.zero_curve.to_discount_curve().get_discount_factor(maturity = T)
-        P_0t = self.zero_curve.to_discount_curve().get_discount_factor(maturity = t)
+        P_0T = self.discount_curve.get_discount_factor(maturity = T)
+        P_0t = self.discount_curve.get_discount_factor(maturity = t)
 
         # B terms
         B1 = self.B1(t = t, T = T)
