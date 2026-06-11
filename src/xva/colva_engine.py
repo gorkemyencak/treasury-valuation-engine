@@ -2,13 +2,13 @@ import pandas as pd
 
 from src.curves.discount_curve import DiscountCurve
 
-from src.risk.exposure.stochastic_exposure_engine import MonteCarloExposureEngine
+from src.risk.exposure.stochastic_exposure_engine_2factor import MonteCarloExposureEngine2Factor
 
 class ColVAEngine:
     """ Collateral Valuation Adjustment Engine """
     def __init__(
             self,
-            exposure_engine: MonteCarloExposureEngine,
+            exposure_engine: MonteCarloExposureEngine2Factor,
             discount_curve: DiscountCurve,
             funding_rate: float,
             collateral_rate: float
