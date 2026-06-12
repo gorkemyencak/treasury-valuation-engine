@@ -73,20 +73,29 @@ class PCAFactorExtractor:
             self,
             yield_curve_history: pd.DataFrame
     ):
-        """ Projects yields onto factors """
+        """ 
+        Projects yield changes onto PCA directions and reconstructs cumulative factor levels
+
+        Remark:
+            PCA is fitted on Δy_{t} (yield changes), so the raw projection gives factor shocks Δf_{t}
+
+            HW2F OU calibration requires factor levels f_{t}, so we require to sum the shocks cumulatively!
+        """
         if self.eigenvectors is None:
             raise ValueError('Fit PCAFactorExtractor first!')
         
-        # yield curve changes -> (dates x tenors)
+        # daily yield changes -> (dates x tenors)
         yield_change = yield_curve_history.diff().dropna()
-
         X = yield_change.values
 
-        # factors -> (dates x n_factors)
+        # PCA-projected factor shocks -> (dates x n_factors)
         factors = X @ self.eigenvectors[:, :self.n_factors]
 
+        # convert projected factor shocks into factor levels
+        factor_levels = np.cumsum(factors, axis = 0)
+
         return pd.DataFrame(
-            factors,
+            factor_levels,
             index = yield_change.index,
             columns = [
                 f'Factor_{i+1}'

@@ -33,7 +33,7 @@ class OUFactorCalibrator:
                     kappa = - ln(phi) / Δt
                 
                 -> residual
-                    epsilon_{t} = x_{t+!} - phi x_{t}                 
+                    epsilon_{t} = x_{t+1} - phi x_{t}                 
 
         -> Regression form:
             x_{t+1} = phi x_{t} + epsilon_{t}
@@ -76,6 +76,7 @@ class OUFactorCalibrator:
 
         # OLS regression
         phi = np.sum(x_t * x_t1) / np.sum(x_t ** 2)
+        phi = np.clip(phi, 1e-8, 0.999999)
 
         # mean reversion
         kappa = -np.log(phi) / self.dt
@@ -125,8 +126,3 @@ class OUFactorCalibrator:
             'sigma2': calibrated_params2['volatility'],
             'rho': float(rho)
         }
-
-
-
-
-    
