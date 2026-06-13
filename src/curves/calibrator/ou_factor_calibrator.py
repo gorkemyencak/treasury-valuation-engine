@@ -75,7 +75,11 @@ class OUFactorCalibrator:
         x_t1 = x[1:]
 
         # OLS regression
-        phi = np.sum(x_t * x_t1) / np.sum(x_t ** 2)
+        phi, _ = np.polyfit(
+            x_t.astype(np.float64), 
+            x_t1.astype(np.float64), 
+            deg = 1
+        ) 
         phi = np.clip(phi, 1e-8, 0.999999)
 
         # mean reversion
