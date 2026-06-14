@@ -47,11 +47,38 @@ class NettingSet:
 
         Formula:
             V_{net}(t, w) = sum_{i=1,..,n} V_{i}(t, w)
+
+        If trade maturities differ:
+            V_{i}(t, w) = 0 for t > T_{i}
         """
         if len(pv_matrices) != self.n_trades:
             raise ValueError('Number of trades must be equal to the number of pv_matrices!')
         
-        net_pv = np.sum(pv_matrices, axis = 0)
+        # longest maturity cf grid
+        max_times = max(
+            pv.shape[1]
+            for pv in pv_matrices
+        )
+
+        padded_matrices = []
+
+        for pv in pv_matrices:
+
+            n_paths, n_times = pv.shape
+
+            if n_times < max_times:
+                
+                pad_width = max_times - n_times
+
+                pv = np.pad(
+                    pv,
+                    pad_width = ((0, 0), (0, pad_width)),
+                    mode = 'constant',
+                    constant_values = 0.0
+                )
+            padded_matrices.append(pv)
+        
+        net_pv = np.sum(padded_matrices, axis = 0)
 
         return net_pv
     
@@ -74,7 +101,7 @@ class NettingSet:
 
             for j in range(net_pv_matrix.shape[1]):
 
-                collateral_matrix[i, j] = self.csa_agreement.required_collateral(portfolio_value = net_pv_matrix[i, j])
+                collateral_matrix[i, j] = self.csa_agreement.total_collateral_held(portfolio_value = net_pv_matrix[i, j])
 
         exposure_matrix = np.maximum(net_pv_matrix - collateral_matrix, 0)
 
@@ -90,9 +117,36 @@ class NettingSet:
         Formula:
             Netting_benefit = sum_{i=1,..,n} max(V_{i}, 0) - max(sum_{i=1,..,n} V_{i}, 0)        
         """
+        # longest maturity cf grid
+        max_times = max(
+            pv.shape[1]
+            for pv in pv_matrices
+        )
+
+        padded_positive = []
+
+        for pv in pv_matrices:
+
+            positive_pv = np.maximum(pv, 0)
+
+            n_paths, n_times = positive_pv.shape
+
+            if n_times < max_times:
+
+                pad_width = max_times - n_times
+
+                positive_pv = np.pad(
+                    positive_pv,
+                    pad_width = ((0, 0), (0, pad_width)),
+                    mode = 'constant',
+                    constant_values = 0.0
+                )
+            
+            padded_positive.append(positive_pv)
+
         # exposure w/out netting
         exposure_wout_netting = np.sum(
-            [np.maximum(pv, 0) for pv in pv_matrices],
+            padded_positive,
             axis = 0
         )
 
