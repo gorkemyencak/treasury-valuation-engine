@@ -38,15 +38,47 @@ class HullWhite2FactorPricer:
         self.rho = rho
 
         self.discount_curve = self.zero_curve.to_discount_curve()
+
+        # caches
+        self.df_cache = {}
+        self.b1_cache = {}
+        self.b2_cache = {}
+        self.var_cache = {}
+
+    # helper function
+    def _cached_df(
+            self,
+            maturity: float
+    ):
+        """ Helper to store discount factor in the cache to speed up the total runtime """
+        if maturity not in self.df_cache:
+            self.df_cache[maturity] = self.discount_curve.get_discount_factor(maturity = maturity)
+
+        return self.df_cache[maturity]    
     
     # B terms
     def B1(self, t, T):
-        return (1 - np.exp(-self.a * (T - t))) / self.a
+        #return (1 - np.exp(-self.a * (T - t))) / self.a
+        key = (t, T)
+
+        if key not in self.b1_cache:
+            
+            self.b1_cache[key] = (1 - np.exp(-self.a * (T - t))) / self.a
+        
+        return self.b1_cache[key]
     
     def B2(self, t, T):
-        return (1 - np.exp(-self.b * (T - t))) / self.b
+        #return (1 - np.exp(-self.b * (T - t))) / self.b
+        key = (t, T)
+
+        if key not in self.b2_cache:
+            
+            self.b2_cache[key] = (1 - np.exp(-self.b * (T - t))) / self.b
+        
+        return self.b2_cache[key]
     
     # variance term
+    '''
     def V(self, t, T):
 
         # B terms
@@ -75,7 +107,42 @@ class HullWhite2FactorPricer:
             * (B1 * B2)
         )
 
-        return V1 + V2 + V12
+        return V1 + V2 + V12 '''
+    def V(self, t, T):
+
+        key = (t, T)
+
+        if key not in self.var_cache:
+
+            # B terms
+            B1 = self.B1(t = t, T = T)
+            B2 = self.B2(t = t, T = T)
+
+            # V terms
+            V1 = (
+                (self.sigma1 ** 2)
+                * (1 - np.exp(-2 * self.a * t))
+                / (2 * self.a)
+                * (B1 ** 2)
+            )
+
+            V2 = (
+                (self.sigma2 ** 2)
+                * (1 - np.exp(-2 * self.b * t))
+                / (2 * self.b)
+                * (B2 ** 2)
+            )
+
+            V12 = (
+                (2 * self.rho * self.sigma1 * self.sigma2)
+                * (1 - np.exp(-(self.a + self.b) * t))
+                / (self.a + self.b)
+                * (B1 * B2)
+            ) 
+
+            self.var_cache[key] = V1 + V2 + V12
+        
+        return self.var_cache[key]
     
     def bond_price(
             self,
@@ -89,8 +156,8 @@ class HullWhite2FactorPricer:
             -> DF(t, T) = P(t, T)
         """
         # discount factors
-        P_0T = self.discount_curve.get_discount_factor(maturity = T)
-        P_0t = self.discount_curve.get_discount_factor(maturity = t)
+        P_0T = self._cached_df(maturity = T) #self.discount_curve.get_discount_factor(maturity = T)
+        P_0t = self._cached_df(maturity = t) #self.discount_curve.get_discount_factor(maturity = t)
 
         # B terms
         B1 = self.B1(t = t, T = T)

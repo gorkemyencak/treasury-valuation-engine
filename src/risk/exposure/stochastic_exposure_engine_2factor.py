@@ -50,12 +50,18 @@ class MonteCarloExposureEngine2Factor:
         # initialize (n_paths x n_times) array
         pv_matrix = np.zeros((n_paths, len(cf_grid)))
 
+        # pre-compute aged swaps ensuring swap object at valuation = t
+        aged_swaps = [
+            swap.aged_swap(valuation_time = t)
+            for t in cf_grid
+        ]
+
         for path_idx in range(n_paths):
 
             for time_idx, t in enumerate(cf_grid):
                 
                 # ensure aged swap at valuation = t
-                swap_t = swap.aged_swap(valuation_time = t)
+                swap_t = aged_swaps[time_idx]   #swap.aged_swap(valuation_time = t)
 
                 # extract factor states
                 x_t = x_paths[path_idx, time_idx]
